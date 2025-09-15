@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Mobile Fridge List</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
+<style>
+body { font-family: sans-serif; margin: 0; padding: 1rem; background: #f9f9f9; }
+h1 { font-size: 1.5rem; text-align: center; }
+#scanner-container { width: 100%; height: 250px; background: #000; margin-bottom: 1rem; border-radius: 12px; overflow: hidden; }
+#fridge-list { list-style: none; padding: 0; }
+#fridge-list li { background: white; margin: 0.5rem 0; padding: 0.75rem; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; }
+button { padding: 0.5rem 1rem; border: none; border-radius: 8px; cursor: pointer; }
+.add-btn { background: #4CAF50; color: white; }
+.remove-btn { background: #e74c3c; color: white; }
+input { padding: 0.5rem; width: 70%; border-radius: 8px; border: 1px solid #ccc; }
+.input-row { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+</style>
+</head>
+<body>
+<h1>📦 My Fridge List</h1>
+
+
+<div id="scanner-container"></div>
+<div class="input-row">
+<input type="text" id="manualInput" placeholder="Add item manually" />
+<button class="add-btn" onclick="addManualItem()">Add</button>
+</div>
+
+
+<ul id="fridge-list"></ul>
+
+
+<script>
+const fridgeListEl = document.getElementById("fridge-list");
+let fridgeItems = JSON.parse(localStorage.getItem("fridgeItems")) || [];
+
+
+function renderList() {
+fridgeListEl.innerHTML = "";
+fridgeItems.forEach((item, index) => {
+const li = document.createElement("li");
+li.innerHTML = `
+<span>${item}</span>
+<button class="remove-btn" onclick="removeItem(${index})">Remove</button>
+`;
+fridgeListEl.appendChild(li);
+});
+localStorage.setItem("fridgeItems", JSON.stringify(fridgeItems));
+}
+
+
+function addItem(item) {
+if (!item) return;
+fridgeItems.push(item);
+renderList();
+}
+
+
+function addManualItem() {
+const input = document.getElementById("manualInput");
+addItem(input.value.trim());
+input.value = "";
+}
+
+
+function removeItem(index) {
+fridgeItems.splice(index, 1);
+renderList();
+}
+
+
+// Initialize barcode scanner
+if (navigator.mediaDevices && typeof Quagga !== "undefined") {
+Quagga.init({
+inputStream: {
+type: "LiveStream",
+target: document.querySelector('#scanner-container'),
+constraints: { facingMode: "environment" }
+},
+decoder: { readers: ["ean_reader", "upc_reader", "code_128_reader"] }
+}, function(err) {
+if (err) {
+console.error(err);
+return;
+}
+Quagga.start();
+});
+
+
+Quagga.onDetected(data => {
+let code = data.codeResult.code;
+addItem("Scanned: " + code);
+Quagga.stop(); // Stop after one scan (optional)
+setTimeout(() => Quagga.start(), 2000); // Restart after 2s
+});
+}
+
+
+renderList();
+</script>
+</body>
+</html>
